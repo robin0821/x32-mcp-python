@@ -1,5 +1,5 @@
 [project]
-name = "python"
+name = "x32-mcp-python"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -9,4 +9,4 @@ dependencies = [
 ]
 
 [project.scripts]
-x32-mcp = "main:main app"
+x32-mcp = "main:main"

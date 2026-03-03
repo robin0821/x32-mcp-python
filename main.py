@@ -10,7 +10,7 @@ Transport options:
 import argparse
 from src.server import mcp
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="XM32-MCP Server")
     parser.add_argument(
         "--transport",
@@ -43,3 +43,7 @@ if __name__ == "__main__":
         # Streamable HTTP transport (newer MCP spec).
         # Client connects to http://<host>:<port>/mcp
         mcp.run(transport="streamable-http", host=args.host, port=args.port)
+
+
+if __name__ == "__main__":
+    main()
