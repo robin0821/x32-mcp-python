@@ -10,3 +10,4 @@ dependencies = [
 
 [project.scripts]
 x32-mcp = "main:main"
+x32-mcp-python = "main:main"
