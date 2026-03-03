@@ -7,6 +7,7 @@ from mcp.server.fastmcp import FastMCP
 from src.services.x32_connection import X32Connection
 from src.utils.db_converter import db_to_fader, fader_to_db, format_db
 from src.utils.color_converter import get_color_value, get_available_colors
+from src.utils.icon_converter import get_icon_value, get_icon_name, get_available_icons
 from src.utils.pan_converter import parse_pan, format_pan
 from src.utils.error_helper import X32Error
 
@@ -173,6 +174,52 @@ def register_channel_tools(mcp: FastMCP, connection: X32Connection) -> None:
             return f"Set channel {channel} name to '{name}'"
         except Exception as e:
             return f"Failed to set channel name: {e}"
+
+    @mcp.tool(
+        name="channel_set_icon",
+        description=(
+            "Set the icon for a specific input channel strip on the X32/M32 mixer. "
+            "Icons are used to visually identify channels on the console scribble strip. "
+            "Accepts an icon name (e.g., 'kick_front', 'piano', 'male_vocal') or a number (1-74)."
+        ),
+    )
+    async def channel_set_icon(channel: int, icon: str) -> str:
+        """
+        Args:
+            channel: Input channel number from 1 to 32
+            icon: Icon name (e.g., kick_front, piano, male_vocal, saxophone, wireless_mic)
+                  or number (1-74). Use 'none' or 1 for no icon.
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        icon_value = get_icon_value(icon)
+        if icon_value is None:
+            available = ", ".join(get_available_icons())
+            return f"Invalid icon '{icon}'. Must be a number (1-74) or one of: {available}"
+        try:
+            await connection.set_channel_parameter(channel, "config/icon", icon_value)
+            icon_display = get_icon_name(icon_value)
+            return f"Set channel {channel} icon to {icon_display} (value: {icon_value})"
+        except Exception as e:
+            return f"Failed to set channel icon: {e}"
+
+    @mcp.tool(
+        name="channel_get_icon",
+        description="Get the current icon for a specific input channel.",
+    )
+    async def channel_get_icon(channel: int) -> str:
+        """
+        Args:
+            channel: Input channel number from 1 to 32
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        try:
+            icon_value = await connection.get_channel_parameter(channel, "config/icon")
+            icon_display = get_icon_name(int(icon_value))
+            return f"Channel {channel} icon: {icon_display} (value: {int(icon_value)})"
+        except Exception as e:
+            return f"Failed to get channel icon: {e}"
 
     @mcp.tool(
         name="channel_set_color",

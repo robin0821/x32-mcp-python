@@ -169,3 +169,48 @@ python/
 | -30 dB | ~0.137 |
 | -60 dB | ~0.025 |
 | -∞ (off) | 0.0 |
+
+## DCA groups 
+- /dca/[1...8]/on, /dca/[1...8]/fader, config
+
+## Matrix 
+- /mtx/[01...06] - fader, mute, name, EQ, dynamics
+
+## AuxIn 
+- /auxin/[01...08] - fader, mute, name, EQ
+
+## FX Return 
+- /fxrtn/[01...08] - fader, mute
+
+## Headamp 
+- /headamp/[000...127]/gain, /headamp/[000...127]/phantom
+
+## Outputs 
+- /outputs/main, /outputs/aux, /outputs/p16, etc.
+
+## Scene/Snippet management 
+- /save, /load, /copy, /delete, /rename, /showdump
+
+## EQ tools (channel EQ, bus EQ)
+
+## Dynamics tools (gate, compressor)
+
+## Meters - /meters requests
+
+## Preferences 
+- /-prefs data
+
+## Status 
+- /-stat data (solo, screen, etc.)
+
+## Actions 
+- /-action data (clear solo, go scene, etc.)
+
+## Config 
+- /config data (routing, linking, etc.)
+
+## USB 
+- /-usb data
+
+## Subscribe/Unsubscribe 
+- /subscribe, /formatsubscribe, /batchsubscribe, /renew, /unsubscribe
