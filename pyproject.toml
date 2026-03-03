@@ -7,3 +7,6 @@ requires-python = ">=3.13"
 dependencies = [
     "mcp[cli]>=1.0.0",
 ]
+
+[project.scripts]
+x32-mcp = "main:main app"
