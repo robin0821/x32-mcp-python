@@ -286,6 +286,112 @@ def register_channel_tools(mcp: FastMCP, connection: X32Connection) -> None:
             return f"Failed to set channel send to bus: {e}"
 
     @mcp.tool(
+        name="channel_get_pan",
+        description="Get the current stereo pan position for a specific input channel.",
+    )
+    async def channel_get_pan(channel: int) -> str:
+        """
+        Args:
+            channel: Input channel number from 1 to 32
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        try:
+            pan_value = await connection.get_channel_parameter(channel, "mix/pan")
+            return f"Channel {channel} pan: {format_pan(float(pan_value))}"
+        except Exception as e:
+            return f"Failed to get channel pan: {e}"
+
+    @mcp.tool(
+        name="channel_get_name",
+        description="Get the current name/label for a specific input channel.",
+    )
+    async def channel_get_name(channel: int) -> str:
+        """
+        Args:
+            channel: Input channel number from 1 to 32
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        try:
+            name = await connection.get_channel_parameter(channel, "config/name")
+            return f"Channel {channel} name: '{name}'"
+        except Exception as e:
+            return f"Failed to get channel name: {e}"
+
+    @mcp.tool(
+        name="channel_get_send_to_bus",
+        description=(
+            "Get the send level from an input channel to a mix bus on the X32/M32 mixer."
+        ),
+    )
+    async def channel_get_send_to_bus(channel: int, bus: int) -> str:
+        """
+        Args:
+            channel: Input channel number from 1 to 32
+            bus: Mix bus number from 1 to 16
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if bus < 1 or bus > 16:
+            return X32Error.invalid_bus(bus)
+        try:
+            ch = str(channel).zfill(2)
+            bus_num = str(bus).zfill(2)
+            fader = float(await connection.get_parameter(f"/ch/{ch}/mix/{bus_num}/level"))
+            db_value = fader_to_db(fader)
+            return f"Channel {channel} send to bus {bus}: {format_db(db_value)} (linear: {fader:.3f})"
+        except Exception as e:
+            return f"Failed to get channel send to bus: {e}"
+
+    @mcp.tool(
+        name="channel_set_source",
+        description=(
+            "Set the input source (patch) for a specific input channel on the X32/M32 mixer. "
+            "This determines which physical input or internal signal feeds the channel. "
+            "Source 0 = off, 1-32 = local XLR inputs, 33+ = other sources (see X32 routing docs)."
+        ),
+    )
+    async def channel_set_source(channel: int, source: int) -> str:
+        """
+        Args:
+            channel: Input channel number from 1 to 32
+            source: Source index (0=off, 1-32=local XLR inputs, 33+=AES50/card/etc.)
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if channel < 1 or channel > 32:
+            return X32Error.invalid_channel(channel)
+        if source < 0 or source > 63:
+            return f"Invalid source {source}. Must be 0–63."
+        try:
+            await connection.set_channel_parameter(channel, "config/insrc", source)
+            return f"Channel {channel} input source set to {source}"
+        except Exception as e:
+            return f"Failed to set channel source: {e}"
+
+    @mcp.tool(
+        name="channel_get_source",
+        description=(
+            "Get the input source (patch) for a specific input channel on the X32/M32 mixer."
+        ),
+    )
+    async def channel_get_source(channel: int) -> str:
+        """
+        Args:
+            channel: Input channel number from 1 to 32
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if channel < 1 or channel > 32:
+            return X32Error.invalid_channel(channel)
+        try:
+            source = await connection.get_channel_parameter(channel, "config/insrc")
+            return f"Channel {channel} input source: {source}"
+        except Exception as e:
+            return f"Failed to get channel source: {e}"
+
+    @mcp.tool(
         name="channel_set_send_to_bus_on",
         description="Enable or disable the send from an input channel to a mix bus.",
     )
@@ -309,3 +415,30 @@ def register_channel_tools(mcp: FastMCP, connection: X32Connection) -> None:
             return f"Channel {channel} send to bus {bus} is {state}"
         except Exception as e:
             return f"Failed to set channel send on/off: {e}"
+
+    @mcp.tool(
+        name="channel_set_send_pre_post",
+        description=(
+            "Set whether the send from an input channel to a mix bus is pre-fader or post-fader. "
+            "Pre-fader sends are unaffected by the channel fader; post-fader sends follow the fader."
+        ),
+    )
+    async def channel_set_send_pre_post(channel: int, bus: int, pre: bool) -> str:
+        """
+        Args:
+            channel: Input channel number from 1 to 32
+            bus: Mix bus number from 1 to 16
+            pre: True for pre-fader send, False for post-fader send
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if bus < 1 or bus > 16:
+            return X32Error.invalid_bus(bus)
+        try:
+            ch = str(channel).zfill(2)
+            bus_num = str(bus).zfill(2)
+            await connection.set_parameter(f"/ch/{ch}/mix/{bus_num}/preamp", 1 if pre else 0)
+            mode = "pre-fader" if pre else "post-fader"
+            return f"Channel {channel} send to bus {bus} set to {mode}"
+        except Exception as e:
+            return f"Failed to set send pre/post: {e}"

@@ -162,6 +162,44 @@ def register_bus_tools(mcp: FastMCP, connection: X32Connection) -> None:
             return f"Failed to set bus name: {e}"
 
     @mcp.tool(
+        name="bus_get_pan",
+        description="Get the current stereo pan position for a specific mix bus.",
+    )
+    async def bus_get_pan(bus: int) -> str:
+        """
+        Args:
+            bus: Mix bus number from 1 to 16
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if bus < 1 or bus > 16:
+            return X32Error.invalid_bus(bus)
+        try:
+            pan_value = await connection.get_bus_parameter(bus, "mix/pan")
+            return f"Bus {bus} pan: {format_pan(float(pan_value))}"
+        except Exception as e:
+            return f"Failed to get bus pan: {e}"
+
+    @mcp.tool(
+        name="bus_get_name",
+        description="Get the current name/label for a specific mix bus.",
+    )
+    async def bus_get_name(bus: int) -> str:
+        """
+        Args:
+            bus: Mix bus number from 1 to 16
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if bus < 1 or bus > 16:
+            return X32Error.invalid_bus(bus)
+        try:
+            name = await connection.get_bus_parameter(bus, "config/name")
+            return f"Bus {bus} name: '{name}'"
+        except Exception as e:
+            return f"Failed to get bus name: {e}"
+
+    @mcp.tool(
         name="bus_set_color",
         description="Set the color for a specific mix bus strip on the X32/M32 mixer.",
     )

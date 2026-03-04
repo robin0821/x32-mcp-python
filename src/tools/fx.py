@@ -163,3 +163,111 @@ def register_fx_tools(mcp: FastMCP, connection: X32Connection) -> None:
             return f"FX {fx} return is now {state}"
         except Exception as e:
             return f"Failed to mute/unmute FX return: {e}"
+
+    @mcp.tool(
+        name="fx_set_on",
+        description=(
+            "Enable or disable an FX insert block on the X32/M32 mixer. "
+            "When disabled, the effect is bypassed."
+        ),
+    )
+    async def fx_set_on(fx: int, on: bool) -> str:
+        """
+        Args:
+            fx: FX rack slot number from 1 to 8
+            on: True to enable the effect, False to bypass/disable
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if fx < 1 or fx > 8:
+            return X32Error.invalid_fx(fx)
+        try:
+            fx_num = str(fx).zfill(2)
+            await connection.set_parameter(f"/fx/{fx_num}/on", 1 if on else 0)
+            state = "enabled" if on else "disabled"
+            return f"FX {fx} is now {state}"
+        except Exception as e:
+            return f"Failed to set FX on/off: {e}"
+
+    @mcp.tool(
+        name="fx_set_mix",
+        description=(
+            "Set the wet/dry mix level for an FX slot on the X32/M32 mixer. "
+            "0.0 = fully dry (no effect), 1.0 = fully wet (full effect)."
+        ),
+    )
+    async def fx_set_mix(fx: int, mix: float) -> str:
+        """
+        Args:
+            fx: FX rack slot number from 1 to 8
+            mix: Wet/dry mix level from 0.0 (dry) to 1.0 (wet)
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if fx < 1 or fx > 8:
+            return X32Error.invalid_fx(fx)
+        if mix < 0.0 or mix > 1.0:
+            return X32Error.invalid_linear(mix)
+        try:
+            fx_num = str(fx).zfill(2)
+            await connection.set_parameter(f"/fx/{fx_num}/mix", mix)
+            return f"FX {fx} mix set to {mix:.3f} ({mix * 100:.0f}% wet)"
+        except Exception as e:
+            return f"Failed to set FX mix: {e}"
+
+    @mcp.tool(
+        name="fx_set_param",
+        description=(
+            "Set a specific parameter value for an FX slot on the X32/M32 mixer. "
+            "Parameters are effect-specific (see X32/M32 documentation for parameter lists). "
+            "Parameter numbers are 1-based (1 to 16)."
+        ),
+    )
+    async def fx_set_param(fx: int, param: int, value: float) -> str:
+        """
+        Args:
+            fx: FX rack slot number from 1 to 8
+            param: Parameter number from 1 to 16
+            value: Parameter value from 0.0 to 1.0
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if fx < 1 or fx > 8:
+            return X32Error.invalid_fx(fx)
+        if param < 1 or param > 16:
+            return f"Invalid parameter number {param}. Must be 1–16."
+        if value < 0.0 or value > 1.0:
+            return X32Error.invalid_linear(value)
+        try:
+            fx_num = str(fx).zfill(2)
+            par_num = str(param).zfill(2)
+            await connection.set_parameter(f"/fx/{fx_num}/par/{par_num}", value)
+            return f"FX {fx} parameter {param} set to {value:.3f}"
+        except Exception as e:
+            return f"Failed to set FX parameter: {e}"
+
+    @mcp.tool(
+        name="fx_get_param",
+        description=(
+            "Get the current value of a specific parameter for an FX slot on the X32/M32 mixer."
+        ),
+    )
+    async def fx_get_param(fx: int, param: int) -> str:
+        """
+        Args:
+            fx: FX rack slot number from 1 to 8
+            param: Parameter number from 1 to 16
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if fx < 1 or fx > 8:
+            return X32Error.invalid_fx(fx)
+        if param < 1 or param > 16:
+            return f"Invalid parameter number {param}. Must be 1–16."
+        try:
+            fx_num = str(fx).zfill(2)
+            par_num = str(param).zfill(2)
+            value = float(await connection.get_parameter(f"/fx/{fx_num}/par/{par_num}"))
+            return f"FX {fx} parameter {param}: {value:.3f}"
+        except Exception as e:
+            return f"Failed to get FX parameter: {e}"
