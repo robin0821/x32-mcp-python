@@ -356,6 +356,69 @@ class X32Connection:
         ch = str(channel).zfill(2)
         await self.set_parameter(f"/ch/{ch}/{param}", value)
 
+    async def request_meters(self, meter_id: str, *extra_args: int) -> list[float] | None:
+        """
+        Request meter data from the X32/M32.
+
+        Sends:  /meters ,s[ii]  <meter_id> [extra_args...]
+        Reply arrives addressed to <meter_id> (e.g. /meters/1) as an OSC blob.
+
+        The blob layout (after the standard OSC address + ",b" type tag):
+          4 bytes  – blob length, big-endian int
+          4 bytes  – float count, little-endian int
+          N × 4    – float values, little-endian
+
+        Returns a list of floats, or None on timeout.
+        """
+        if not self._is_connected or not self._sock:
+            raise Exception("Not connected to X32/M32")
+
+        args: list[Any] = [meter_id] + list(extra_args)
+
+        loop = asyncio.get_event_loop()
+        future: asyncio.Future = loop.create_future()
+        self._message_queue[meter_id] = future
+
+        data = _encode_osc_message("/meters", args)
+        try:
+            self._sock.send(data)
+        except Exception as e:
+            self._message_queue.pop(meter_id, None)
+            raise e
+
+        try:
+            msg = await asyncio.wait_for(future, timeout=self.DEFAULT_TIMEOUT)
+        except asyncio.TimeoutError:
+            self._message_queue.pop(meter_id, None)
+            return None
+        finally:
+            self._message_queue.pop(meter_id, None)
+
+        if not msg or not msg.args:
+            return None
+
+        # The first argument should be a blob ('b' type)
+        blob: bytes | None = None
+        for arg in msg.args:
+            if arg.type == "b":
+                blob = arg.value
+                break
+
+        if blob is None:
+            return None
+
+        # Decode: first 4 bytes = float count (little-endian int32)
+        if len(blob) < 4:
+            return None
+
+        float_count = struct.unpack_from("<i", blob, 0)[0]
+        expected_bytes = 4 + float_count * 4
+        if len(blob) < expected_bytes:
+            return None
+
+        floats = list(struct.unpack_from(f"<{float_count}f", blob, 4))
+        return floats
+
     async def get_bus_parameter(self, bus: int, param: str) -> Any:
         """Get a bus parameter."""
         if bus < 1 or bus > 16:

@@ -216,6 +216,134 @@ def register_aux_tools(mcp: FastMCP, connection: X32Connection) -> None:
             return f"Failed to set channel send to AUX: {e}"
 
     @mcp.tool(
+        name="aux_get_dca",
+        description=(
+            "Get the DCA group assignments for a specific AUX input return on the X32/M32 mixer. "
+            "Returns which of the 8 DCA groups (1-8) the AUX input is assigned to."
+        ),
+    )
+    async def aux_get_dca(aux: int) -> str:
+        """
+        Args:
+            aux: AUX input return number from 1 to 8
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if aux < 1 or aux > 8:
+            return f"Invalid AUX number {aux}. Must be 1–8."
+        try:
+            aux_num = str(aux).zfill(2)
+            raw = await connection.get_parameter(f"/auxin/{aux_num}/grp/dca")
+            bitmask = int(raw)
+            assigned = [dca for dca in range(1, 9) if bitmask & (1 << (dca - 1))]
+            if assigned:
+                dca_list = ", ".join(f"DCA {d}" for d in assigned)
+                return f"AUX {aux} is assigned to: {dca_list} (raw value: {bitmask})"
+            else:
+                return f"AUX {aux} is not assigned to any DCA group (raw value: {bitmask})"
+        except Exception as e:
+            return f"Failed to get AUX DCA assignments: {e}"
+
+    @mcp.tool(
+        name="aux_set_dca",
+        description=(
+            "Set the DCA group assignments for a specific AUX input return on the X32/M32 mixer. "
+            "Accepts a list of DCA groups (1-8) to assign the AUX input to. "
+            "Pass an empty list to remove the AUX input from all DCA groups."
+        ),
+    )
+    async def aux_set_dca(aux: int, dcas: list[int]) -> str:
+        """
+        Args:
+            aux: AUX input return number from 1 to 8
+            dcas: List of DCA group numbers (1-8). Empty list removes all assignments.
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if aux < 1 or aux > 8:
+            return f"Invalid AUX number {aux}. Must be 1–8."
+        invalid = [d for d in dcas if d < 1 or d > 8]
+        if invalid:
+            return f"Invalid DCA group(s): {invalid}. Each must be between 1 and 8."
+        try:
+            bitmask = 0
+            for dca in dcas:
+                bitmask |= 1 << (dca - 1)
+            aux_num = str(aux).zfill(2)
+            await connection.set_parameter(f"/auxin/{aux_num}/grp/dca", bitmask)
+            if dcas:
+                dca_list = ", ".join(f"DCA {d}" for d in sorted(dcas))
+                return f"AUX {aux} assigned to: {dca_list} (bitmask: {bitmask})"
+            else:
+                return f"AUX {aux} removed from all DCA groups (bitmask: 0)"
+        except Exception as e:
+            return f"Failed to set AUX DCA assignments: {e}"
+
+    @mcp.tool(
+        name="aux_get_mute_group",
+        description=(
+            "Get the mute group assignments for a specific AUX input return on the X32/M32 mixer. "
+            "Returns which of the 6 mute groups (1-6) the AUX input is assigned to."
+        ),
+    )
+    async def aux_get_mute_group(aux: int) -> str:
+        """
+        Args:
+            aux: AUX input return number from 1 to 8
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if aux < 1 or aux > 8:
+            return f"Invalid AUX number {aux}. Must be 1–8."
+        try:
+            aux_num = str(aux).zfill(2)
+            raw = await connection.get_parameter(f"/auxin/{aux_num}/grp/mute")
+            bitmask = int(raw)
+            assigned = [grp for grp in range(1, 7) if bitmask & (1 << (grp - 1))]
+            if assigned:
+                grp_list = ", ".join(f"Mute Group {g}" for g in assigned)
+                return f"AUX {aux} is assigned to: {grp_list} (raw value: {bitmask})"
+            else:
+                return f"AUX {aux} is not assigned to any mute group (raw value: {bitmask})"
+        except Exception as e:
+            return f"Failed to get AUX mute group assignments: {e}"
+
+    @mcp.tool(
+        name="aux_set_mute_group",
+        description=(
+            "Set the mute group assignments for a specific AUX input return on the X32/M32 mixer. "
+            "Accepts a list of mute groups (1-6) to assign the AUX input to. "
+            "Pass an empty list to remove the AUX input from all mute groups."
+        ),
+    )
+    async def aux_set_mute_group(aux: int, groups: list[int]) -> str:
+        """
+        Args:
+            aux: AUX input return number from 1 to 8
+            groups: List of mute group numbers (1-6). Empty list removes all assignments.
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if aux < 1 or aux > 8:
+            return f"Invalid AUX number {aux}. Must be 1–8."
+        invalid = [g for g in groups if g < 1 or g > 6]
+        if invalid:
+            return f"Invalid mute group(s): {invalid}. Each must be between 1 and 6."
+        try:
+            bitmask = 0
+            for grp in groups:
+                bitmask |= 1 << (grp - 1)
+            aux_num = str(aux).zfill(2)
+            await connection.set_parameter(f"/auxin/{aux_num}/grp/mute", bitmask)
+            if groups:
+                grp_list = ", ".join(f"Mute Group {g}" for g in sorted(groups))
+                return f"AUX {aux} assigned to: {grp_list} (bitmask: {bitmask})"
+            else:
+                return f"AUX {aux} removed from all mute groups (bitmask: 0)"
+        except Exception as e:
+            return f"Failed to set AUX mute group assignments: {e}"
+
+    @mcp.tool(
         name="channel_get_send_to_aux",
         description=(
             "Get the send level from an input channel to an AUX output bus on the X32/M32 mixer."

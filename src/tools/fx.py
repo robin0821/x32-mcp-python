@@ -247,6 +247,134 @@ def register_fx_tools(mcp: FastMCP, connection: X32Connection) -> None:
             return f"Failed to set FX parameter: {e}"
 
     @mcp.tool(
+        name="fx_get_dca",
+        description=(
+            "Get the DCA group assignments for a specific FX return on the X32/M32 mixer. "
+            "Returns which of the 8 DCA groups (1-8) the FX return is assigned to."
+        ),
+    )
+    async def fx_get_dca(fx: int) -> str:
+        """
+        Args:
+            fx: FX rack slot number from 1 to 8
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if fx < 1 or fx > 8:
+            return X32Error.invalid_fx(fx)
+        try:
+            fx_num = str(fx).zfill(2)
+            raw = await connection.get_parameter(f"/fxrtn/{fx_num}/grp/dca")
+            bitmask = int(raw)
+            assigned = [dca for dca in range(1, 9) if bitmask & (1 << (dca - 1))]
+            if assigned:
+                dca_list = ", ".join(f"DCA {d}" for d in assigned)
+                return f"FX {fx} return is assigned to: {dca_list} (raw value: {bitmask})"
+            else:
+                return f"FX {fx} return is not assigned to any DCA group (raw value: {bitmask})"
+        except Exception as e:
+            return f"Failed to get FX DCA assignments: {e}"
+
+    @mcp.tool(
+        name="fx_set_dca",
+        description=(
+            "Set the DCA group assignments for a specific FX return on the X32/M32 mixer. "
+            "Accepts a list of DCA groups (1-8) to assign the FX return to. "
+            "Pass an empty list to remove the FX return from all DCA groups."
+        ),
+    )
+    async def fx_set_dca(fx: int, dcas: list[int]) -> str:
+        """
+        Args:
+            fx: FX rack slot number from 1 to 8
+            dcas: List of DCA group numbers (1-8). Empty list removes all assignments.
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if fx < 1 or fx > 8:
+            return X32Error.invalid_fx(fx)
+        invalid = [d for d in dcas if d < 1 or d > 8]
+        if invalid:
+            return f"Invalid DCA group(s): {invalid}. Each must be between 1 and 8."
+        try:
+            bitmask = 0
+            for dca in dcas:
+                bitmask |= 1 << (dca - 1)
+            fx_num = str(fx).zfill(2)
+            await connection.set_parameter(f"/fxrtn/{fx_num}/grp/dca", bitmask)
+            if dcas:
+                dca_list = ", ".join(f"DCA {d}" for d in sorted(dcas))
+                return f"FX {fx} return assigned to: {dca_list} (bitmask: {bitmask})"
+            else:
+                return f"FX {fx} return removed from all DCA groups (bitmask: 0)"
+        except Exception as e:
+            return f"Failed to set FX DCA assignments: {e}"
+
+    @mcp.tool(
+        name="fx_get_mute_group",
+        description=(
+            "Get the mute group assignments for a specific FX return on the X32/M32 mixer. "
+            "Returns which of the 6 mute groups (1-6) the FX return is assigned to."
+        ),
+    )
+    async def fx_get_mute_group(fx: int) -> str:
+        """
+        Args:
+            fx: FX rack slot number from 1 to 8
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if fx < 1 or fx > 8:
+            return X32Error.invalid_fx(fx)
+        try:
+            fx_num = str(fx).zfill(2)
+            raw = await connection.get_parameter(f"/fxrtn/{fx_num}/grp/mute")
+            bitmask = int(raw)
+            assigned = [grp for grp in range(1, 7) if bitmask & (1 << (grp - 1))]
+            if assigned:
+                grp_list = ", ".join(f"Mute Group {g}" for g in assigned)
+                return f"FX {fx} return is assigned to: {grp_list} (raw value: {bitmask})"
+            else:
+                return f"FX {fx} return is not assigned to any mute group (raw value: {bitmask})"
+        except Exception as e:
+            return f"Failed to get FX mute group assignments: {e}"
+
+    @mcp.tool(
+        name="fx_set_mute_group",
+        description=(
+            "Set the mute group assignments for a specific FX return on the X32/M32 mixer. "
+            "Accepts a list of mute groups (1-6) to assign the FX return to. "
+            "Pass an empty list to remove the FX return from all mute groups."
+        ),
+    )
+    async def fx_set_mute_group(fx: int, groups: list[int]) -> str:
+        """
+        Args:
+            fx: FX rack slot number from 1 to 8
+            groups: List of mute group numbers (1-6). Empty list removes all assignments.
+        """
+        if not connection.connected:
+            return X32Error.not_connected()
+        if fx < 1 or fx > 8:
+            return X32Error.invalid_fx(fx)
+        invalid = [g for g in groups if g < 1 or g > 6]
+        if invalid:
+            return f"Invalid mute group(s): {invalid}. Each must be between 1 and 6."
+        try:
+            bitmask = 0
+            for grp in groups:
+                bitmask |= 1 << (grp - 1)
+            fx_num = str(fx).zfill(2)
+            await connection.set_parameter(f"/fxrtn/{fx_num}/grp/mute", bitmask)
+            if groups:
+                grp_list = ", ".join(f"Mute Group {g}" for g in sorted(groups))
+                return f"FX {fx} return assigned to: {grp_list} (bitmask: {bitmask})"
+            else:
+                return f"FX {fx} return removed from all mute groups (bitmask: 0)"
+        except Exception as e:
+            return f"Failed to set FX mute group assignments: {e}"
+
+    @mcp.tool(
         name="fx_get_param",
         description=(
             "Get the current value of a specific parameter for an FX slot on the X32/M32 mixer."

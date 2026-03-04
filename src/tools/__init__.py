@@ -17,6 +17,7 @@ from src.tools.aux import register_aux_tools
 from src.tools.matrix import register_matrix_tools
 from src.tools.meters import register_meters_tools
 from src.tools.dca import register_dca_tools
+from src.tools.mute import register_mute_tools
 
 
 def register_all_tools(mcp: FastMCP, connection: X32Connection) -> None:
@@ -36,3 +37,4 @@ def register_all_tools(mcp: FastMCP, connection: X32Connection) -> None:
     register_matrix_tools(mcp, connection)
     register_meters_tools(mcp, connection)
     register_dca_tools(mcp, connection)
+    register_mute_tools(mcp, connection)
